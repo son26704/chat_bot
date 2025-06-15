@@ -3,6 +3,7 @@ import cors from 'cors';
 import 'express-async-errors';
 import { sequelize, initModels } from './db/database';
 import authRoutes from './routes/authRoutes';
+import protectedRoutes from './routes/protectedRoutes';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api', protectedRoutes);
 
 app.get('/', (req, res) => {
   res.send('Chat Bot Backend is running!');

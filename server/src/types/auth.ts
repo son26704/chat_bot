@@ -1,3 +1,6 @@
+import { Request } from 'express';
+import { IncomingHttpHeaders } from 'http';
+
 export interface RegisterRequest {
   email: string;
   password: string;
@@ -16,4 +19,17 @@ export interface AuthResponse {
     email: string;
     name: string;
   };
+}
+
+export interface UserPayload {
+  id: string;
+}
+
+interface CustomHeaders extends IncomingHttpHeaders {
+  authorization?: string;
+}
+
+export interface AuthenticatedRequest extends Request {
+  headers: CustomHeaders;
+  user?: UserPayload;
 }
