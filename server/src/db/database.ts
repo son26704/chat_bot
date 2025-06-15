@@ -12,4 +12,10 @@ const sequelize = new Sequelize({
   password: process.env.DB_PASSWORD, 
 });
 
-export default sequelize;
+import User from '../models/User';
+
+const initModels = async () => {
+  await User.sync();
+}
+
+export { sequelize, initModels };
