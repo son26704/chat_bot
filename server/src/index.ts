@@ -4,14 +4,10 @@ import 'express-async-errors';
 import { sequelize, initModels } from './db/database';
 import authRoutes from './routes/authRoutes';
 import protectedRoutes from './routes/protectedRoutes';
-import dotenv from 'dotenv';
-dotenv.config();
 
-// Initialize environment variables
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
-// Middleware setup
 app.use(cors());
 app.use(express.json());
 
