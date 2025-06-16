@@ -13,12 +13,17 @@ export interface LoginRequest {
 }
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: {
     id: string;
     email: string;
     name: string;
   };
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
 }
 
 export interface UserPayload {
@@ -29,7 +34,14 @@ interface CustomHeaders extends IncomingHttpHeaders {
   authorization?: string;
 }
 
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: UserPayload;
+    headers: CustomHeaders;
+  }
+}
+
 export interface AuthenticatedRequest extends Request {
-  headers: CustomHeaders;
   user?: UserPayload;
+  headers: CustomHeaders;
 }

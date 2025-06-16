@@ -13,9 +13,11 @@ const sequelize = new Sequelize({
 });
 
 import User from '../models/User';
+import RefreshToken from '../models/RefreshToken';
 
 const initModels = async () => {
   await User.sync();
+  await RefreshToken.sync();
 }
 
 export { sequelize, initModels };

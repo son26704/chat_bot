@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { register, login } from '../services/authService';
-import { RegisterRequest, LoginRequest } from '../types/auth';
+import { register, login, refreshAccessToken } from '../services/authService';
+import { RegisterRequest, LoginRequest, RefreshTokenRequest } from '../types/auth';
 
 export const registerController = async (req: Request, res: Response) => {
     try {
@@ -20,4 +20,14 @@ export const loginController = async (req: Request, res: Response) => {
     } catch (error: any) {
         res.status(400).json({ message: error.message });
     }
+};
+
+export const refreshTokenController = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken }: RefreshTokenRequest = req.body;
+    const result = await refreshAccessToken(refreshToken);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(401).json({ message: error.message });
+  }
 };
