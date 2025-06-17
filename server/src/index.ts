@@ -4,6 +4,7 @@ import 'express-async-errors';
 import { sequelize, initModels } from './db/database';
 import authRoutes from './routes/authRoutes';
 import protectedRoutes from './routes/protectedRoutes';
+import chatRoutes from './routes/chatRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +14,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api', protectedRoutes);
+app.use('/api', chatRoutes);
 
 app.get('/', (req, res) => {
   res.send('Chat Bot Backend is running!');
