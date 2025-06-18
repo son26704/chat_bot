@@ -14,10 +14,14 @@ const sequelize = new Sequelize({
 
 import User from '../models/User';
 import RefreshToken from '../models/RefreshToken';
+import Conversation from '../models/Conversation';
+import Message from '../models/Message';
 
 const initModels = async () => {
   await User.sync();
   await RefreshToken.sync();
+  await Conversation.sync();
+  await Message.sync();
 }
 
 export { sequelize, initModels };

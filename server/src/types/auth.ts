@@ -30,6 +30,16 @@ export interface UserPayload {
   id: string;
 }
 
+export interface ChatRequest {
+  prompt: string;
+  conversationId?: string;
+}
+
+export interface ChatResponse {
+  response: string;
+  conversationId: string;
+}
+
 interface CustomHeaders extends IncomingHttpHeaders {
   authorization?: string;
 }
