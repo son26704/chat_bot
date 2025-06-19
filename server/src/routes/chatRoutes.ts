@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { chatController, getHistoryController, getConversationsController } from '../controllers/chatController';
+import { chatController, getHistoryController, getConversationsController, deleteConversationController } from '../controllers/chatController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -7,5 +7,6 @@ const router = Router();
 router.post('/chat', authMiddleware, chatController);
 router.get('/chat/:conversationId', authMiddleware, getHistoryController);
 router.get('/conversations', authMiddleware, getConversationsController);
+router.delete('/conversations/:conversationId', authMiddleware, deleteConversationController);
 
 export default router;

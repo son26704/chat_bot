@@ -22,30 +22,25 @@ export const processChat = async (
     });
   }
 
-  // Lấy lịch sử tin nhắn
   const messages = await Message.findAll({
     where: { conversationId: conversation.id },
     attributes: ['content', 'role'],
     order: [['createdAt', 'ASC']],
   });
 
-  // Chuyển đổi lịch sử thành định dạng Gemini
   const history = messages.map((msg) => ({
     role: (msg.role === 'user' ? 'user' : 'model') as 'user' | 'model',
     content: msg.content,
   }));
 
-  // Lưu prompt của người dùng
   await Message.create({
     conversationId: conversation.id,
     content: prompt,
     role: 'user',
   });
 
-  // Gọi Gemini API với lịch sử
   const response = await generateChatResponse(prompt, history);
 
-  // Lưu phản hồi
   await Message.create({
     conversationId: conversation.id,
     content: response,
@@ -96,4 +91,17 @@ export const getUserConversations = async (userId: string) => {
   });
 
   return conversations;
+};
+
+export const deleteConversation = async (userId: string, conversationId: string) => {
+  const conversation = await Conversation.findOne({
+    where: { id: conversationId, userId },
+  });
+
+  if (!conversation) {
+    throw new Error('Conversation not found or not authorized');
+  }
+
+  await Message.destroy({ where: { conversationId } });
+  await conversation.destroy();
 };
