@@ -5,12 +5,15 @@ import { sequelize, initModels } from './db/database';
 import authRoutes from './routes/authRoutes';
 import protectedRoutes from './routes/protectedRoutes';
 import chatRoutes from './routes/chatRoutes';
+import { createServer } from 'http';
+import { initSocket } from './socket';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+const httpServer = createServer(app);
 
 app.use('/api/auth', authRoutes);
 app.use('/api', protectedRoutes);
@@ -26,7 +29,9 @@ const startServer = async () => {
     console.log('Connection to PostgreSQL successful!');
     await initModels();
     console.log('Models synchronized!');
-    app.listen(PORT, () => {
+    const io = initSocket(httpServer);
+    console.log('Socket.io initialized!');
+    httpServer.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
   } catch (error) {
