@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { processChat, getConversationHistory, getUserConversations, deleteConversation } from '../services/chatService';
+import { processChat, getConversationHistory, getUserConversations, deleteConversation, renameConversation } from '../services/chatService';
 import { AuthenticatedRequest, ChatRequest, ChatResponse } from '../types/auth';
 
 export const chatController = async (req: AuthenticatedRequest, res: Response) => {
@@ -55,6 +55,22 @@ export const deleteConversationController = async (req: AuthenticatedRequest, re
     }
     await deleteConversation(userId, conversationId);
     res.status(204).send();
+  } catch (error: any) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const renameConversationController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { conversationId } = req.params;
+    const { title } = req.body;
+    if (!title || typeof title !== 'string') {
+      return res.status(400).json({ message: 'Title is required and must be a string' });
+    }
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'User not authenticated' });
+    const conversation = await renameConversation(userId, conversationId, title);
+    res.status(200).json(conversation);
   } catch (error: any) {
     res.status(404).json({ message: error.message });
   }

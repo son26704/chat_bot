@@ -36,7 +36,7 @@ export const initSocket = (httpServer: HttpServer) => {
     socket.on('send_message', async (data: ChatRequest, callback) => {
       try {
         const userId = socket.data.user.id;
-        socket.to(`user:${userId}`).emit('typing', { conversationId: data.conversationId });
+        io.to(`user:${userId}`).emit('typing', { conversationId: data.conversationId });
         const result: ChatResponse = await processChat(userId, data);
         const response = {
           message: { id: Date.now().toString(), content: result.response, role: 'assistant', createdAt: new Date().toISOString() },
