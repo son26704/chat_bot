@@ -1,34 +1,42 @@
-import express, { Application } from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-// import sequelize from "./db/database";
+import express from 'express';
+import cors from 'cors';
+import 'express-async-errors';
+import { sequelize, initModels } from './db/database';
+import authRoutes from './routes/authRoutes';
+import protectedRoutes from './routes/protectedRoutes';
+import chatRoutes from './routes/chatRoutes';
+import { createServer } from 'http';
+import { initSocket } from './socket';
 
-dotenv.config();
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-const app: Application = express();
-const port = process.env.PORT;
-
-// Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const httpServer = createServer(app);
 
-// Database connection
-// sequelize
-//   .authenticate()
-//   .then(() => {
-//     console.log("Database connection has been established successfully.");
-//   })
-//   .catch((error) => {
-//     console.error("Unable to connect to the database:", error);
-//   });
+app.use('/api/auth', authRoutes);
+app.use('/api', protectedRoutes);
+app.use('/api', chatRoutes);
 
-// Routes
-app.get("/", (req, res) => {
-  res.json({ message: "Welcome to Chat Bot API" });
+app.get('/', (req, res) => {
+  res.send('Chat Bot Backend is running!');
 });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+const startServer = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Connection to PostgreSQL successful!');
+    await initModels();
+    console.log('Models synchronized!');
+    const io = initSocket(httpServer);
+    console.log('Socket.io initialized!');
+    httpServer.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Unable to start server:', error);
+  }
+};
+
+startServer();
