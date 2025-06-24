@@ -1,4 +1,4 @@
-# Chat Bot Application 🤖💬
+# Chat Bot Application 
 
 A real-time chat application built with React, TypeScript, Node.js, Express, Socket.IO, and PostgreSQL, integrated with Google Gemini API for conversational AI.
 
