@@ -2,6 +2,19 @@
 
 A real-time chat application built with React, TypeScript, Node.js, Express, Socket.IO, and PostgreSQL, integrated with Google Gemini API for conversational AI.
 
+## 📸 Screenshots
+
+<div align="center">
+  <img src="images/screenshot-1.png" alt="Chat Interface" width="45%" />
+  <img src="images/screenshot-2.png" alt="Login Page" width="45%" />
+</div>
+
+## 🏗️ System Architecture
+
+<div align="center">
+  <img src="images/system-architecture.png" alt="System Architecture Diagram" width="80%" />
+</div>
+
 ## ✨ Features
 
 - **🔐 User Authentication**: Register, login, and logout with JWT-based authentication
@@ -48,7 +61,7 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/<your-username>/chat_bot.git
+git clone https://github.com/son26704/chat_bot.git
 cd chat_bot
 ```
 
