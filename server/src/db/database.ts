@@ -5,11 +5,12 @@ dotenv.config();
 
 const sequelize = new Sequelize({
   dialect: 'postgres',
-  host: 'localhost',
-  port: 5432,
-  database: 'chatbot',
-  username: 'postgres',
-  password: process.env.DB_PASSWORD, 
+  host: process.env.DB_HOST || 'postgres',
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+  database: process.env.DB_NAME || 'chatbot',
+  username: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD,
+  logging: false, // Tắt log SQL để gọn console
 });
 
 import User from '../models/User';
@@ -18,10 +19,16 @@ import Conversation from '../models/Conversation';
 import Message from '../models/Message';
 
 const initModels = async () => {
-  await User.sync();
-  await RefreshToken.sync();
-  await Conversation.sync();
-  await Message.sync();
-}
+  try {
+    await User.sync();
+    await RefreshToken.sync();
+    await Conversation.sync();
+    await Message.sync();
+    console.log('Database models synchronized');
+  } catch (error) {
+    console.error('Failed to sync models:', error);
+    throw error;
+  }
+};
 
 export { sequelize, initModels };
