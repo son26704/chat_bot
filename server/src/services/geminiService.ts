@@ -17,7 +17,13 @@ export const generateChatResponse = async (
   history: ChatMessage[] = []
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({
+  model: 'gemini-2.0-flash',
+  // tools: [{
+  //   googleSearchRetrieval: {}, 
+  // }],
+});
     const chat = model.startChat({
       history: history.map((msg) => ({
         role: msg.role,
