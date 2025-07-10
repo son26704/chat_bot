@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { processChat, getConversationHistory, getUserConversations, deleteConversation, renameConversation } from '../services/chatService';
+import { processChat, getConversationHistory, getUserConversations, deleteConversation, renameConversation, deleteMessageAndBelow, editMessageAndContinue } from '../services/chatService';
 import { AuthenticatedRequest, ChatRequest, ChatResponse } from '../types/auth';
 
 export const chatController = async (req: AuthenticatedRequest, res: Response) => {
@@ -73,5 +73,33 @@ export const renameConversationController = async (req: AuthenticatedRequest, re
     res.status(200).json(conversation);
   } catch (error: any) {
     res.status(404).json({ message: error.message });
+  }
+};
+
+export const deleteMessageController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+    await deleteMessageAndBelow(userId, messageId);
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const editMessageController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { messageId } = req.params;
+    const { newContent } = req.body;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'User not authenticated' });
+    if (!newContent || typeof newContent !== 'string') return res.status(400).json({ message: 'newContent is required' });
+    const result = await editMessageAndContinue(userId, messageId, newContent);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
   }
 };

@@ -16,8 +16,8 @@ app.use(express.json());
 const httpServer = createServer(app);
 
 app.use('/api/auth', authRoutes);
-app.use('/api', protectedRoutes);
 app.use('/api', chatRoutes);
+app.use('/api', protectedRoutes);
 
 app.get('/', (req, res) => {
   res.send('Chat Bot Backend is running!');

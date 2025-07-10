@@ -102,6 +102,51 @@ export const renameConversation = async (userId: string, conversationId: string,
     where: { id: conversationId, userId },
   });
   if (!conversation) throw new Error('Conversation not found or not authorized');
-  await conversation.update({ title });
+  await conversation.update({ title, updatedAt: new Date(), });
   return conversation;
+};
+
+export const deleteMessageAndBelow = async (userId: string, messageId: string) => {
+  // Lấy message cần xóa
+  const message = await Message.findOne({ where: { id: messageId } });
+  if (!message) throw new Error('Message not found');
+  // Lấy conversation để kiểm tra quyền
+  const conversation = await Conversation.findOne({ where: { id: message.conversationId, userId } });
+  if (!conversation) throw new Error('Not authorized or conversation not found');
+  if (message.role !== 'user') throw new Error('Only user messages can be deleted');
+  // Xóa tất cả message có createdAt >= message.createdAt trong cùng conversation
+  await Message.destroy({
+    where: {
+      conversationId: message.conversationId,
+      createdAt: { [Op.gte]: message.createdAt },
+    },
+  });
+
+  await conversation.update({ updatedAt: new Date() });
+};
+
+export const editMessageAndContinue = async (
+  userId: string,
+  messageId: string,
+  newContent: string
+): Promise<ChatResponse> => {
+  // Lấy message cũ
+  const oldMessage = await Message.findOne({ where: { id: messageId } });
+  if (!oldMessage) throw new Error('Message not found');
+  // Kiểm tra quyền
+  const conversation = await Conversation.findOne({ where: { id: oldMessage.conversationId, userId } });
+  if (!conversation) throw new Error('Not authorized or conversation not found');
+  if (oldMessage.role !== 'user') throw new Error('Only user messages can be edited');
+  // Xóa message cũ và các message bên dưới
+  await Message.destroy({
+    where: {
+      conversationId: oldMessage.conversationId,
+      createdAt: { [Op.gte]: oldMessage.createdAt },
+    },
+  });
+  // Cập nhật updatedAt để đẩy lên đầu danh sách
+  await conversation.update({ updatedAt: new Date() });
+  // Gửi lại prompt mới
+  const result = await processChat(userId, { prompt: newContent, conversationId: oldMessage.conversationId });
+  return result;
 };
