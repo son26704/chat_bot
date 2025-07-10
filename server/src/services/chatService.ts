@@ -150,3 +150,56 @@ export const editMessageAndContinue = async (
   const result = await processChat(userId, { prompt: newContent, conversationId: oldMessage.conversationId });
   return result;
 };
+
+export const generateFollowUpQuestions = async (
+  userId: string,
+  conversationId: string
+): Promise<string> => {
+  const conversation = await Conversation.findByPk(conversationId);
+  if (!conversation || conversation.userId !== userId) {
+    throw new Error('Invalid conversation');
+  }
+
+  const messages = await Message.findAll({
+    where: { conversationId: conversation.id },
+    attributes: ['content', 'role'],
+    order: [['createdAt', 'ASC']],
+  });
+
+  if (messages.length === 0) {
+    throw new Error('No messages in conversation');
+  }
+
+  let totalTokens = 0;
+  let rawConversation = '';
+  for (let i = messages.length - 1; i >= 0 && totalTokens < MAX_TOKENS; i--) {
+    const msg = messages[i];
+    const msgTokens = estimateTokens(msg.content);
+    if (totalTokens + msgTokens <= MAX_TOKENS) {
+      const role = msg.role === 'user' ? 'User' : 'Assistant';
+      rawConversation = `${role}: ${msg.content}\n` + rawConversation;
+      totalTokens += msgTokens;
+    }
+  }
+
+  const followUpPrompt = `
+Dưới đây là đoạn hội thoại giữa người dùng và trợ lý:
+
+${rawConversation}
+
+Hãy gợi ý đúng 3 câu hỏi tiếp theo mà người dùng có thể hỏi, liên quan trực tiếp đến nội dung cuộc trò chuyện.
+
+❗ Chỉ phản hồi đúng định dạng JSON như sau, không giải thích gì thêm:
+
+{
+  "suggestions": [
+    "Câu hỏi gợi ý 1",
+    "Câu hỏi gợi ý 2",
+    "Câu hỏi gợi ý 3"
+  ]
+}
+`;
+
+  const response = await generateChatResponse(followUpPrompt, []);
+  return response; // ✅ Trả về nguyên văn chuỗi JSON như mô hình phản hồi
+};

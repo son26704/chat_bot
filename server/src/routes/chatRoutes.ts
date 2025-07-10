@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { chatController, getHistoryController, getConversationsController, deleteConversationController, renameConversationController, deleteMessageController, editMessageController } from '../controllers/chatController';
+import { chatController, getHistoryController, getConversationsController, deleteConversationController, renameConversationController, deleteMessageController, editMessageController, getFollowUpQuestionsController } from '../controllers/chatController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -11,5 +11,6 @@ router.delete('/conversations/:conversationId', authMiddleware, deleteConversati
 router.patch('/conversations/:conversationId', authMiddleware, renameConversationController);
 router.delete('/messages/:messageId', authMiddleware, deleteMessageController);
 router.patch('/messages/:messageId', authMiddleware, editMessageController);
+router.get('/chat/:conversationId/follow-up', authMiddleware, getFollowUpQuestionsController);
 
 export default router;

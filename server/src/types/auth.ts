@@ -40,6 +40,10 @@ export interface ChatResponse {
   conversationId: string;
 }
 
+export interface FollowUpQuestionsResponse {
+  suggestions: string;
+}
+
 interface CustomHeaders extends IncomingHttpHeaders {
   authorization?: string;
 }

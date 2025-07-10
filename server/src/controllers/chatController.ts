@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { processChat, getConversationHistory, getUserConversations, deleteConversation, renameConversation, deleteMessageAndBelow, editMessageAndContinue } from '../services/chatService';
-import { AuthenticatedRequest, ChatRequest, ChatResponse } from '../types/auth';
+import { processChat, getConversationHistory, getUserConversations, deleteConversation, renameConversation, deleteMessageAndBelow, editMessageAndContinue, generateFollowUpQuestions } from '../services/chatService';
+import { AuthenticatedRequest, ChatRequest, ChatResponse, FollowUpQuestionsResponse } from '../types/auth';
 
 export const chatController = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -99,6 +99,21 @@ export const editMessageController = async (req: AuthenticatedRequest, res: Resp
     if (!newContent || typeof newContent !== 'string') return res.status(400).json({ message: 'newContent is required' });
     const result = await editMessageAndContinue(userId, messageId, newContent);
     res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const getFollowUpQuestionsController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+    const suggestions = await generateFollowUpQuestions(userId, conversationId);
+    const response: FollowUpQuestionsResponse = { suggestions };
+    res.status(200).json(response);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }
