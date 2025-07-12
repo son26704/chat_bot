@@ -1,3 +1,4 @@
+// server/src/routes/chatRoutes.ts
 import { Router } from 'express';
 import { chatController, getHistoryController, getConversationsController, deleteConversationController, renameConversationController, deleteMessageController, editMessageController, getFollowUpQuestionsController } from '../controllers/chatController';
 import { authMiddleware } from '../middlewares/authMiddleware';

@@ -1,3 +1,4 @@
+// server/src/controllers/chatController.ts
 import { Request, Response } from 'express';
 import { processChat, getConversationHistory, getUserConversations, deleteConversation, renameConversation, deleteMessageAndBelow, editMessageAndContinue, generateFollowUpQuestions } from '../services/chatService';
 import { AuthenticatedRequest, ChatRequest, ChatResponse, FollowUpQuestionsResponse } from '../types/auth';

@@ -1,3 +1,4 @@
+// server/src/types/auth.ts
 import { Request } from 'express';
 import { IncomingHttpHeaders } from 'http';
 

@@ -1,3 +1,4 @@
+// server/src/models/User.ts
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../db/database';
 

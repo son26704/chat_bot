@@ -1,3 +1,4 @@
+// server/src/services/authService.ts
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';

@@ -1,10 +1,13 @@
+// server/src/index.ts
 import express from 'express';
 import cors from 'cors';
 import 'express-async-errors';
 import { sequelize, initModels } from './db/database';
+import { connectMongo } from './db/mongodb';
 import authRoutes from './routes/authRoutes';
 import protectedRoutes from './routes/protectedRoutes';
 import chatRoutes from './routes/chatRoutes';
+import userRoutes from './routes/userRoutes';
 import { createServer } from 'http';
 import { initSocket } from './socket';
 
@@ -17,6 +20,7 @@ const httpServer = createServer(app);
 
 app.use('/api/auth', authRoutes);
 app.use('/api', chatRoutes);
+app.use('/api', userRoutes);
 app.use('/api', protectedRoutes);
 
 app.get('/', (req, res) => {
@@ -28,6 +32,7 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('Connection to PostgreSQL successful!');
     await initModels();
+    await connectMongo();
     console.log('Models synchronized!');
     const io = initSocket(httpServer);
     console.log('Socket.io initialized!');
