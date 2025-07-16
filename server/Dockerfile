@@ -1,3 +1,4 @@
+# Dockerfile for the server application
 FROM node:18-alpine
 
 WORKDIR /app

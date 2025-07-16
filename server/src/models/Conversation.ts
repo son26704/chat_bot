@@ -1,3 +1,4 @@
+// server/src/models/Conversation.ts
 import { Model, DataTypes } from 'sequelize';
 import {sequelize} from '../db/database';
 import User from './User';
@@ -23,6 +24,10 @@ Conversation.init(
     },
     title: {
       type: DataTypes.STRING,
+      allowNull: true,
+    },
+    systemPrompt: {
+      type: DataTypes.TEXT,
       allowNull: true,
     },
   },

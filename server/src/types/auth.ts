@@ -1,6 +1,7 @@
+// server/src/types/auth.ts
 import { Request } from 'express';
 import { IncomingHttpHeaders } from 'http';
-
+import Message from '../models/Message';
 export interface RegisterRequest {
   email: string;
   password: string;
@@ -33,11 +34,18 @@ export interface UserPayload {
 export interface ChatRequest {
   prompt: string;
   conversationId?: string;
+  systemPrompt?: string; 
 }
 
 export interface ChatResponse {
-  response: string;
+  userMessage: Message;
+  assistantMessage: Message;
   conversationId: string;
+  memoryWorthyUserMessageId?: string;
+}
+
+export interface FollowUpQuestionsResponse {
+  suggestions: string;
 }
 
 interface CustomHeaders extends IncomingHttpHeaders {

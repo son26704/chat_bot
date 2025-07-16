@@ -1,3 +1,4 @@
+// client/src/types/auth.ts
 export interface RegisterRequest {
   name: string;
   email: string;
@@ -24,11 +25,14 @@ export interface User {
 export interface ChatRequest {
   prompt: string;
   conversationId?: string;
+  systemPrompt?: string; // Thêm trường này để gửi prompt hệ thống nếu có
 }
 
 export interface ChatResponse {
   conversationId: string;
-  message: Message;
+  userMessage: Message;
+  assistantMessage: Message;
+  memoryWorthyUserMessageId?: string;
 }
 
 export interface Message {
@@ -36,6 +40,7 @@ export interface Message {
   content: string;
   role: 'user' | 'assistant';
   createdAt: string;
+  isMemoryWorthy?: boolean; 
 }
 
 export interface Conversation {
@@ -44,4 +49,9 @@ export interface Conversation {
   Messages: Message[];
   createdAt: string;
   updatedAt: string;
+  isMemoryWorthy?: boolean; 
+}
+
+export interface FollowUpQuestionsResponse {
+  suggestions: string;
 }

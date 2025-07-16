@@ -1,3 +1,4 @@
+// client/src/services/authService.ts
 import api from "./api";
 import io from 'socket.io-client';
 
@@ -10,6 +11,7 @@ import type {
   ChatRequest,
   ChatResponse,
   Conversation,
+  FollowUpQuestionsResponse,
 } from "../types/auth";
 
 let socket: (Socket | null) = null;
@@ -109,4 +111,68 @@ export const renameConversation = async (
   title: string
 ): Promise<void> => {
   await api.patch(`/conversations/${conversationId}`, { title });
+};
+
+export const deleteMessage = async (messageId: string): Promise<void> => {
+  await api.delete(`/messages/${messageId}`);
+};
+
+export const editMessage = async (messageId: string, newContent: string): Promise<ChatResponse> => {
+  const response = await api.patch<ChatResponse>(`/messages/${messageId}`, { newContent });
+  return response.data;
+};
+
+export const getFollowUpQuestions = async (conversationId: string): Promise<FollowUpQuestionsResponse> => {
+  const response = await api.get<FollowUpQuestionsResponse>(`/chat/${conversationId}/follow-up`);
+  return response.data;
+};
+
+export const getUserProfile = async (): Promise<Record<string, string[]>> => {
+  const response = await api.get<Record<string, string[]>>('/profile');
+  return response.data;
+};
+
+
+export const updateUserProfile = async (data: Record<string, string[]>) => {
+  return await api.put('/profile', data);
+};
+
+export const getSuggestedProfileFromMessage = async (
+  messageId: string
+): Promise<Record<string, string[]>> => {
+  try {
+    const res = await api.get<{ result: string }>(`/profile/suggest-from-message/${messageId}`);
+    
+    const cleanResult = res.data.result.replace(/```json|```/g, "").trim();
+    
+    const parsed = JSON.parse(cleanResult);
+    
+    if (!parsed.profile) {
+      return {};
+    }
+    
+    return parsed.profile;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getSuggestedProfileFromConversation = async (
+  conversationId: string
+): Promise<Record<string, string[]>> => {
+  try {
+    const res = await api.get<{ result: string }>(`/profile/suggest-from-conversation/${conversationId}`);
+    
+    const cleanResult = res.data.result.replace(/```json|```/g, "").trim();
+    
+    const parsed = JSON.parse(cleanResult);
+    
+    if (!parsed.profile) {
+      return {};
+    }
+    
+    return parsed.profile;
+  } catch (error) {
+    throw error;
+  }
 };
