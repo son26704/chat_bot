@@ -15,11 +15,15 @@ const estimateTokens = (text: string) => {
 
 export const processChat = async (
   userId: string,
-  { prompt, conversationId }: ChatRequest
+  { prompt, conversationId, systemPrompt }: ChatRequest
 ): Promise<ChatResponse> => {
-  let conversation = conversationId
-    ? await Conversation.findByPk(conversationId)
-    : await Conversation.create({ userId, title: prompt.slice(0, 50) });
+  let conversation: any;
+  if (conversationId) {
+    conversation = await Conversation.findByPk(conversationId);
+  } else {
+    // Nếu có systemPrompt, lưu vào Conversation
+    conversation = await Conversation.create({ userId, title: prompt.slice(0, 50), systemPrompt });
+  }
   if (!conversation || conversation.userId !== userId) {
     throw new Error("Invalid conversation");
   }
@@ -41,6 +45,8 @@ export const processChat = async (
       totalTokens += msgTokens;
     }
   }
+  // Lấy systemPrompt từ Conversation nếu có (không chèn vào đầu history)
+  const sysPrompt = conversation.systemPrompt;
   await Message.create({
     conversationId: conversation.id,
     content: prompt,
@@ -59,7 +65,8 @@ export const processChat = async (
     console.log("🧠 USER PROFILE:", profile?.data || "Chưa có profile");
   }
 
-  const response = await generateChatResponse(prompt, history);
+  // Khi gọi Gemini, nếu sysPrompt có, truyền vào systemInstruction nếu SDK hỗ trợ
+  const response = await generateChatResponse(prompt, history, sysPrompt);
   await Message.create({
     conversationId: conversation.id,
     content: response,
@@ -248,4 +255,101 @@ Hãy gợi ý đúng 3 câu hỏi tiếp theo mà người dùng có thể hỏi
 
   const response = await generateChatResponse(followUpPrompt, []);
   return response; // ✅ Trả về nguyên văn chuỗi JSON như mô hình phản hồi
+};
+
+export const suggestProfileFromMessage = async (userId: string, messageId: string): Promise<string> => {
+  const message = await Message.findOne({ where: { id: messageId }, include: [Conversation] });
+  if (!message || message.role !== 'user') throw new Error("Invalid message");
+
+  // Sửa lại để sử dụng MongoDB syntax
+  const userProfile = await UserProfile.findOne({ userId });
+  const profileData = JSON.stringify(userProfile?.data || {}, null, 2);
+
+  const prompt = `
+Bạn là một hệ thống hỗ trợ cập nhật hồ sơ người dùng (User Profile) từ nội dung hội thoại.
+
+Dưới đây là hồ sơ hiện tại của người dùng dưới dạng JSON:
+${profileData}
+
+Tiếp theo là nội dung người dùng đã nói:
+"${message.content}"
+
+YÊU CẦU QUAN TRỌNG:
+1. Phân tích thông tin mới từ tin nhắn người dùng
+2. CHỈ BỔ SUNG hoặc CẬP NHẬT thông tin mới vào profile hiện tại
+3. TUYỆT ĐỐI KHÔNG XÓA hoặc GHI ĐÈ thông tin cũ trừ khi có chỉ dẫn rõ ràng từ người dùng
+4. Chỉ lưu thông tin dài hạn, liên quan đến cá nhân (tên, nghề nghiệp, sở thích, quê quán, mục tiêu...)
+5. Bỏ qua thông tin tạm thời, ý kiến ngắn hạn
+
+Chỉ phản hồi đúng định dạng JSON như sau (không giải thích, không markdown):
+
+{
+  "profile": {
+    "Tên trường 1": ["giá trị 1", "giá trị 2"],
+    "Tên trường 2": ["giá trị"]
+  }
+}
+
+Nếu không có thông tin mới cần thêm, phản hồi y nguyên hồ sơ hiện tại:
+{ "profile": ${profileData} }
+`;
+
+  const response = await generateChatResponse(prompt, []);
+  return response;
+};
+
+export const suggestProfileFromConversation = async (userId: string, conversationId: string): Promise<string> => {
+  const conversation = await Conversation.findOne({ where: { id: conversationId, userId } });
+  if (!conversation) throw new Error("Conversation not found");
+
+  const messages = await Message.findAll({
+    where: { conversationId, role: 'user' },
+    order: [['createdAt', 'ASC']],
+    attributes: ['content'],
+  });
+
+  // Sửa lại để sử dụng MongoDB syntax
+  const userProfile = await UserProfile.findOne({ userId });
+  const profileData = JSON.stringify(userProfile?.data || {}, null, 2);
+
+  let totalTokens = 0;
+  let userContext = '';
+  for (const msg of messages.reverse()) {
+    const tokens = estimateTokens(msg.content);
+    if (totalTokens + tokens > MAX_TOKENS) break;
+    userContext = `${msg.content}\n${userContext}`;
+    totalTokens += tokens;
+  }
+
+  const prompt = `
+Bạn là một hệ thống hỗ trợ cập nhật hồ sơ người dùng (User Profile) từ nội dung hội thoại.
+
+Dưới đây là hồ sơ hiện tại của người dùng dưới dạng JSON:
+${profileData}
+
+Tiếp theo là đoạn hội thoại người dùng đã nói:
+${userContext}
+
+YÊU CẦU QUAN TRỌNG:
+1. Phân tích thông tin mới từ toàn bộ cuộc hội thoại
+2. CHỈ BỔ SUNG hoặc CẬP NHẬT thông tin mới vào profile hiện tại
+3. TUYỆT ĐỐI KHÔNG XÓA hoặc GHI ĐÈ thông tin cũ trừ khi có chỉ dẫn rõ ràng từ người dùng
+4. Chỉ lưu thông tin dài hạn, liên quan đến cá nhân (tên, nghề nghiệp, sở thích, quê quán, mục tiêu...)
+5. Bỏ qua thông tin tạm thời, ý kiến ngắn hạn
+
+Chỉ phản hồi đúng định dạng JSON như sau (không giải thích, không markdown):
+
+{
+  "profile": {
+    "Tên trường 1": ["giá trị 1", "giá trị 2"],
+    "Tên trường 2": ["giá trị"]
+  }
+}
+
+Nếu không có thông tin mới cần thêm, phản hồi y nguyên hồ sơ hiện tại:
+{ "profile": ${profileData} }
+`;
+
+  const response = await generateChatResponse(prompt, []);
+  return response;
 };

@@ -34,6 +34,7 @@ export interface UserPayload {
 export interface ChatRequest {
   prompt: string;
   conversationId?: string;
+  systemPrompt?: string; // Thêm trường này để nhận prompt hệ thống nếu có
 }
 
 export interface ChatResponse {

@@ -26,6 +26,10 @@ Conversation.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    systemPrompt: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     sequelize,

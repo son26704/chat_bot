@@ -1,6 +1,6 @@
 // server/src/routes/chatRoutes.ts
 import { Router } from 'express';
-import { chatController, getHistoryController, getConversationsController, deleteConversationController, renameConversationController, deleteMessageController, editMessageController, getFollowUpQuestionsController } from '../controllers/chatController';
+import { chatController, getHistoryController, getConversationsController, deleteConversationController, renameConversationController, deleteMessageController, editMessageController, getFollowUpQuestionsController, getSuggestedProfileFromConversation, getSuggestedProfileFromMessage } from '../controllers/chatController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -13,5 +13,8 @@ router.patch('/conversations/:conversationId', authMiddleware, renameConversatio
 router.delete('/messages/:messageId', authMiddleware, deleteMessageController);
 router.patch('/messages/:messageId', authMiddleware, editMessageController);
 router.get('/chat/:conversationId/follow-up', authMiddleware, getFollowUpQuestionsController);
+
+router.get("/profile/suggest-from-message/:messageId", authMiddleware, getSuggestedProfileFromMessage);
+router.get("/profile/suggest-from-conversation/:conversationId", authMiddleware, getSuggestedProfileFromConversation);
 
 export default router;

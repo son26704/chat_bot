@@ -14,21 +14,21 @@ interface ChatMessage {
 
 export const generateChatResponse = async (
   prompt: string,
-  history: ChatMessage[] = []
+  history: ChatMessage[] = [],
+  systemPrompt?: string
 ): Promise<string> => {
   try {
     // const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const model = genAI.getGenerativeModel({
-  model: 'gemini-2.0-flash',
-  // tools: [{
-  //   googleSearchRetrieval: {}, 
-  // }],
-});
+      model: 'gemini-2.0-flash',
+      // tools: [{ googleSearchRetrieval: {} }],
+    });
     const chat = model.startChat({
       history: history.map((msg) => ({
         role: msg.role,
         parts: [{ text: msg.content }],
       })),
+      ...(systemPrompt ? { systemInstruction: { role: 'system', parts: [{ text: systemPrompt }] } } : {}),
     });
     const result = await chat.sendMessage(prompt);
     const response = result.response;
