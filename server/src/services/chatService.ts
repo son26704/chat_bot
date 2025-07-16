@@ -47,12 +47,11 @@ export const processChat = async (
   }
   // Lấy systemPrompt từ Conversation nếu có (không chèn vào đầu history)
   const sysPrompt = conversation.systemPrompt;
-  await Message.create({
+  const userMsg = await Message.create({
     conversationId: conversation.id,
     content: prompt,
     role: "user",
   });
-  // Memory-worthy check
   const isMemoryWorthy = keywordFilter(prompt) || patternFilter(prompt);
   console.log(
     "🧠 Memory-worthy message?",
@@ -72,7 +71,7 @@ export const processChat = async (
     content: response,
     role: "assistant",
   });
-  return { response, conversationId: conversation.id };
+  return { response, conversationId: conversation.id, memoryWorthyUserMessageId: isMemoryWorthy ? userMsg.id : undefined, };
 };
 
 export const getConversationHistory = async (
