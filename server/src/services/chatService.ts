@@ -65,13 +65,21 @@ export const processChat = async (
   }
 
   // Khi gọi Gemini, nếu sysPrompt có, truyền vào systemInstruction nếu SDK hỗ trợ
-  const response = await generateChatResponse(prompt, history, sysPrompt);
-  await Message.create({
-    conversationId: conversation.id,
-    content: response,
-    role: "assistant",
-  });
-  return { response, conversationId: conversation.id, memoryWorthyUserMessageId: isMemoryWorthy ? userMsg.id : undefined, };
+  const replyText = await generateChatResponse(prompt, history, sysPrompt);
+
+const assistantMsg = await Message.create({
+  conversationId: conversation.id,
+  content: replyText,
+  role: "assistant",
+});
+
+return {
+  userMessage: userMsg,
+  assistantMessage: assistantMsg,
+  conversationId: conversation.id,
+  memoryWorthyUserMessageId: isMemoryWorthy ? userMsg.id : undefined,
+};
+
 };
 
 export const getConversationHistory = async (

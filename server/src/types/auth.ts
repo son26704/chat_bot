@@ -38,9 +38,9 @@ export interface ChatRequest {
 }
 
 export interface ChatResponse {
-  response: string;
+  userMessage: Message;
+  assistantMessage: Message;
   conversationId: string;
-  // message: Message & { isMemoryWorthy?: boolean };
   memoryWorthyUserMessageId?: string;
 }
 

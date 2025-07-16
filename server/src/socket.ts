@@ -40,17 +40,15 @@ export const initSocket = (httpServer: HttpServer) => {
         io.to(`user:${userId}`).emit("typing", {
           conversationId: data.conversationId,
         });
-        const result: ChatResponse = await processChat(userId, data);
+        const result = await processChat(userId, data);
+
         const response = {
-          message: {
-            id: Date.now().toString(),
-            content: result.response,
-            role: "assistant",
-            createdAt: new Date().toISOString(),
-          },
+          userMessage: result.userMessage,
+          assistantMessage: result.assistantMessage,
           conversationId: result.conversationId,
-          memoryWorthyUserMessageId: result.memoryWorthyUserMessageId, 
+          memoryWorthyUserMessageId: result.memoryWorthyUserMessageId,
         };
+
         io.to(`user:${userId}`).emit("receive_message", response);
         callback({ success: true, data: response });
       } catch (error: any) {
