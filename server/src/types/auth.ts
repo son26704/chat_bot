@@ -35,6 +35,7 @@ export interface ChatRequest {
   prompt: string;
   conversationId?: string;
   systemPrompt?: string; 
+  attachments?: { name: string; content: string }[];
 }
 
 export interface ChatResponse {
@@ -43,6 +44,11 @@ export interface ChatResponse {
   conversationId: string;
   memoryWorthyUserMessageId?: string;
 }
+
+export type ChatMessage = {
+  role: "user" | "model";
+  content: string;
+};
 
 export interface FollowUpQuestionsResponse {
   suggestions: string;

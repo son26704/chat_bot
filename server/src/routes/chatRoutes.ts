@@ -13,6 +13,7 @@ router.patch('/conversations/:conversationId', authMiddleware, renameConversatio
 router.delete('/messages/:messageId', authMiddleware, deleteMessageController);
 router.patch('/messages/:messageId', authMiddleware, editMessageController);
 router.get('/chat/:conversationId/follow-up', authMiddleware, getFollowUpQuestionsController);
+// router.post("/chat/upload-context", authMiddleware, ...chatWithFileContext);
 
 router.get("/profile/suggest-from-message/:messageId", authMiddleware, getSuggestedProfileFromMessage);
 router.get("/profile/suggest-from-conversation/:conversationId", authMiddleware, getSuggestedProfileFromConversation);

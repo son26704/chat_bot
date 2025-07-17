@@ -2,23 +2,69 @@
 import { Request, Response } from 'express';
 import { processChat, getConversationHistory, getUserConversations, deleteConversation, renameConversation, deleteMessageAndBelow, editMessageAndContinue, generateFollowUpQuestions, suggestProfileFromConversation, suggestProfileFromMessage } from '../services/chatService';
 import { AuthenticatedRequest, ChatRequest, ChatResponse, FollowUpQuestionsResponse } from '../types/auth';
+import multer from "multer";
+import mammoth from "mammoth";
+import pdfParse from "pdf-parse";
+import fs from "fs";
+import path from "path";
 
-export const chatController = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { prompt, conversationId, systemPrompt } = req.body as ChatRequest;
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ message: 'Prompt is required and must be a string' });
+const upload = multer({ dest: "uploads/" });
+
+export const chatController = [
+  upload.array("files"), // nhận nhiều file với key "files"
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { prompt, conversationId, systemPrompt } = req.body;
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      if (!prompt) return res.status(400).json({ message: "Prompt required" });
+
+      let attachments: { name: string; content: string }[] = [];
+
+      if (req.files && Array.isArray(req.files)) {
+        for (const file of req.files) {
+          const ext = path.extname(file.originalname).toLowerCase();
+          const filePath = file.path;
+          let content = "";
+
+          try {
+            if (ext === ".pdf") {
+              const buffer = fs.readFileSync(filePath);
+              const parsed = await pdfParse(buffer);
+              content = parsed.text;
+            } else if (ext === ".docx" || ext === ".doc") {
+              const buffer = fs.readFileSync(filePath);
+              const result = await mammoth.extractRawText({ buffer });
+              content = result.value;
+            } else if (ext === ".txt") {
+              content = fs.readFileSync(filePath, "utf8");
+            }
+          } catch (err) {
+            console.warn("❗ Failed to parse file", file.originalname, err);
+          } finally {
+            fs.unlinkSync(filePath); // cleanup file temp
+          }
+
+          attachments.push({
+            name: file.originalname,
+            content: content || "[Không thể đọc nội dung]",
+          });
+        }
+      }
+
+      const result: ChatResponse = await processChat(userId, {
+        prompt,
+        conversationId,
+        systemPrompt,
+        attachments,
+      });
+
+      res.status(200).json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
     }
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
-    }
-    const result: ChatResponse = await processChat(userId, { prompt, conversationId, systemPrompt });
-    res.status(200).json(result);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
-};
+  },
+];
 
 export const getHistoryController = async (req: AuthenticatedRequest, res: Response) => {
   try {

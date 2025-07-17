@@ -3,7 +3,7 @@ import { generateChatResponse } from "./geminiService";
 import Conversation from "../models/Conversation";
 import Message from "../models/Message";
 import UserProfile from "../models/UserProfile";
-import { ChatRequest, ChatResponse } from "../types/auth";
+import { ChatRequest, ChatResponse, ChatMessage } from "../types/auth";
 import { keywordFilter, patternFilter } from "../utils/filters";
 import { Op } from "sequelize";
 
@@ -15,71 +15,87 @@ const estimateTokens = (text: string) => {
 
 export const processChat = async (
   userId: string,
-  { prompt, conversationId, systemPrompt }: ChatRequest
+  { prompt, conversationId, systemPrompt, attachments }: ChatRequest
 ): Promise<ChatResponse> => {
   let conversation: any;
   if (conversationId) {
     conversation = await Conversation.findByPk(conversationId);
   } else {
-    // Nếu có systemPrompt, lưu vào Conversation
-    conversation = await Conversation.create({ userId, title: prompt.slice(0, 50), systemPrompt });
+    conversation = await Conversation.create({
+      userId,
+      title: prompt.slice(0, 50),
+      systemPrompt,
+    });
   }
+
   if (!conversation || conversation.userId !== userId) {
     throw new Error("Invalid conversation");
   }
+
   const messages = await Message.findAll({
     where: { conversationId: conversation.id },
     attributes: ["content", "role"],
     order: [["createdAt", "ASC"]],
   });
+
   let totalTokens = estimateTokens(prompt);
   const history = [];
   for (let i = messages.length - 1; i >= 0 && totalTokens < MAX_TOKENS; i--) {
-    const msg = messages[i];
-    const msgTokens = estimateTokens(msg.content);
-    if (totalTokens + msgTokens <= MAX_TOKENS) {
-      history.unshift({
-        role: (msg.role === "user" ? "user" : "model") as "user" | "model",
-        content: msg.content,
-      });
-      totalTokens += msgTokens;
-    }
+  const msg = messages[i];
+  const msgTokens = estimateTokens(msg.content);
+  if (totalTokens + msgTokens <= MAX_TOKENS) {
+    history.unshift({
+      role: msg.role === "user" ? "user" : "model", // Đảm bảo đúng kiểu
+      content: msg.content,
+    } as ChatMessage); // Thêm ép kiểu rõ ràng
+    totalTokens += msgTokens;
   }
-  // Lấy systemPrompt từ Conversation nếu có (không chèn vào đầu history)
-  const sysPrompt = conversation.systemPrompt;
+}
+
+  // ✅ Gộp nội dung file vào prompt
+  let finalPrompt = prompt;
+  if (attachments && attachments.length > 0) {
+    const filesText = attachments
+      .map(
+        (file) =>
+          `Tên file: ${file.name}\nNội dung:\n${file.content}\n---`
+      )
+      .join("\n");
+
+    finalPrompt = `
+Thông tin đính kèm từ file người dùng:
+${filesText}
+Trả lời câu hỏi sau dựa trên nội dung trên.
+${prompt}
+    `.trim();
+  }
+
   const userMsg = await Message.create({
     conversationId: conversation.id,
-    content: prompt,
+    content:
+      attachments && attachments.length > 0
+        ? `[Đính kèm: ${attachments.map((a) => a.name).join(", ")}]\n${prompt}`
+        : prompt,
     role: "user",
+    attachments: attachments?.map((a) => a.name) || [],
   });
+
   const isMemoryWorthy = keywordFilter(prompt) || patternFilter(prompt);
-  console.log(
-    "🧠 Memory-worthy message?",
-    isMemoryWorthy,
-    "| Content:",
-    prompt
-  );
-  if (isMemoryWorthy) {
-    const profile = await UserProfile.findOne({ userId });
-    console.log("🧠 USER PROFILE:", profile?.data || "Chưa có profile");
-  }
 
-  // Khi gọi Gemini, nếu sysPrompt có, truyền vào systemInstruction nếu SDK hỗ trợ
-  const replyText = await generateChatResponse(prompt, history, sysPrompt);
+  const replyText = await generateChatResponse(finalPrompt, history, conversation.systemPrompt);
 
-const assistantMsg = await Message.create({
-  conversationId: conversation.id,
-  content: replyText,
-  role: "assistant",
-});
+  const assistantMsg = await Message.create({
+    conversationId: conversation.id,
+    content: replyText,
+    role: "assistant",
+  });
 
-return {
-  userMessage: userMsg,
-  assistantMessage: assistantMsg,
-  conversationId: conversation.id,
-  memoryWorthyUserMessageId: isMemoryWorthy ? userMsg.id : undefined,
-};
-
+  return {
+    userMessage: userMsg,
+    assistantMessage: assistantMsg,
+    conversationId: conversation.id,
+    memoryWorthyUserMessageId: isMemoryWorthy ? userMsg.id : undefined,
+  };
 };
 
 export const getConversationHistory = async (
