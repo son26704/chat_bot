@@ -292,8 +292,8 @@ Chỉ phản hồi đúng định dạng JSON như sau (không giải thích, kh
 
 {
   "profile": {
-    "Tên trường 1": ["giá trị 1", "giá trị 2"],
-    "Tên trường 2": ["giá trị"]
+    "Tên trường 1": "giá trị 1",
+    "Tên trường 2": "giá trị 2",
   }
 }
 
@@ -348,8 +348,8 @@ Chỉ phản hồi đúng định dạng JSON như sau (không giải thích, kh
 
 {
   "profile": {
-    "Tên trường 1": ["giá trị 1", "giá trị 2"],
-    "Tên trường 2": ["giá trị"]
+    "Tên trường 1": "giá trị 1",
+    "Tên trường 2": "giá trị 2",
   }
 }
 

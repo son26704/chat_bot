@@ -1,3 +1,4 @@
+// server/src/models/UserProfile.ts
 import mongoose from 'mongoose';
 
 const UserProfileSchema = new mongoose.Schema({

@@ -1,3 +1,4 @@
+// server/src/controllers/userProfileController.ts
 import { Request, Response } from 'express';
 import UserProfile from '../models/UserProfile';
 import { AuthenticatedRequest } from '../types/auth';
@@ -22,8 +23,9 @@ export const updateUserProfileController = async (req: AuthenticatedRequest, res
 
   // Validate: tất cả value phải là array of string
   const invalid = Object.entries(newData).some(
-    ([_, value]) => !Array.isArray(value) || value.some((v) => typeof v !== 'string')
-  );
+  ([_, value]) => typeof value !== 'string'
+);
+
   if (invalid) {
     return res.status(400).json({ message: 'Tất cả giá trị phải là mảng các chuỗi.' });
   }
