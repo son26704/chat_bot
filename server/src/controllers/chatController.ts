@@ -14,7 +14,6 @@ import {
 } from "../services/chatService";
 import {
   AuthenticatedRequest,
-  ChatRequest,
   ChatResponse,
   FollowUpQuestionsResponse,
 } from "../types/auth";
@@ -23,6 +22,8 @@ import mammoth from "mammoth";
 import pdfParse from "pdf-parse";
 import fs from "fs";
 import path from "path";
+import rp from "request-promise";
+import * as cheerio from "cheerio";
 
 const upload = multer({
   dest: "uploads/",
@@ -30,7 +31,7 @@ const upload = multer({
 });
 
 export const chatController = [
-  upload.array("files"), // nhận nhiều file với key "files"
+  upload.array("files"),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { prompt, conversationId, systemPrompt } = req.body;
@@ -38,8 +39,9 @@ export const chatController = [
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
       if (!prompt) return res.status(400).json({ message: "Prompt required" });
 
-      let attachments: { name: string; content: string }[] = [];
+      const attachments: { name: string; content: string }[] = [];
 
+      // 1. Parse file đính kèm
       if (req.files && Array.isArray(req.files)) {
         for (const file of req.files) {
           const ext = path.extname(file.originalname).toLowerCase();
@@ -61,13 +63,10 @@ export const chatController = [
           } catch (err) {
             console.warn("❗ Failed to parse file", file.originalname, err);
           } finally {
-            fs.unlinkSync(filePath); // cleanup file temp
+            fs.unlinkSync(filePath);
           }
 
-          if (content.length > 2000) {
-            content = content.slice(0, 2000);
-          }
-
+          if (content.length > 2000) content = content.slice(0, 2000);
           attachments.push({
             name: file.originalname,
             content: content || "[Không thể đọc nội dung]",
@@ -75,6 +74,75 @@ export const chatController = [
         }
       }
 
+      // 2. Parse link đính kèm
+      let linkItems: { url: string; name: string }[] = [];
+      if (req.body.links) {
+        try {
+          linkItems = JSON.parse(req.body.links);
+        } catch (err) {
+          console.warn("❌ Không parse được req.body.links", err);
+        }
+      }
+
+      for (const link of linkItems) {
+        try {
+          console.log(`[DEBUG] Crawling link: ${link.url}`);
+          const html = await rp(link.url, { timeout: 5000 });
+          const $ = cheerio.load(html);
+
+          const title = $("title").text().trim() || link.url;
+
+          // Ưu tiên phần tử chính nếu có
+          const mainSelectors = [
+            "article",
+            "[role=main]",
+            "main",
+            ".post-content",
+            ".blog-post",
+            "#main",
+            "body",
+          ];
+
+          let contentElem = null;
+          for (const selector of mainSelectors) {
+            const found = $(selector);
+            if (found.length && found.text().length > 100) {
+              contentElem = found;
+              break;
+            }
+          }
+
+          if (!contentElem) contentElem = $("body");
+
+          const blocks = contentElem.find("p, h1, h2, h3, li").toArray();
+          const cleanedBlocks = blocks
+            .map((el) => $(el).text().trim())
+            .filter((t) => t.length > 30);
+
+          let text = "";
+          let total = 0;
+          for (const para of cleanedBlocks) {
+            if (total + para.length > 1800) break;
+            text += para + "\n\n";
+            total += para.length;
+          }
+
+          attachments.push({
+            name: title,
+            content: text || "[Không lấy được nội dung từ link]",
+          });
+
+          console.log(`[DEBUG] ✅ Crawled ${link.url} - ${text.length} chars`);
+        } catch (err) {
+          console.warn("❗ Lỗi khi tải link:", link.url, err);
+          attachments.push({
+            name: link.name || link.url,
+            content: "[Không thể lấy nội dung từ link]",
+          });
+        }
+      }
+
+      // 3. Gửi prompt xử lý
       const result: ChatResponse = await processChat(userId, {
         prompt,
         conversationId,
@@ -84,7 +152,8 @@ export const chatController = [
 
       res.status(200).json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      console.error("❌ chatController error:", err);
+      res.status(500).json({ message: err.message || "Internal Server Error" });
     }
   },
 ];

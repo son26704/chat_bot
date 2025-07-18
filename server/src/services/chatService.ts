@@ -114,7 +114,7 @@ export const getConversationHistory = async (
     throw new Error("Conversation not found");
   }
 
-  // // Fallback attachments về [] nếu null trong từng message
+  // Fallback attachments về [] nếu null trong từng message
   // const messages = (conversation.get && conversation.get("Messages")) || (conversation as any).Messages;
   // if (messages) {
   //   const fixedMessages = messages.map((msg: any) => ({
@@ -145,17 +145,17 @@ export const getUserConversations = async (userId: string) => {
   });
 
   // Fallback attachments về [] nếu null trong từng message của mỗi conversation
-  conversations.forEach((conv: any) => {
-    const messages = (conv.get && conv.get("Messages")) || (conv as any).Messages;
-    if (messages) {
-      const fixedMessages = messages.map((msg: any) => ({
-        ...msg,
-        attachments: msg.attachments || [],
-      }));
-      if (conv.set) conv.set("Messages", fixedMessages);
-      else (conv as any).Messages = fixedMessages;
-    }
-  });
+  // conversations.forEach((conv: any) => {
+  //   const messages = (conv.get && conv.get("Messages")) || (conv as any).Messages;
+  //   if (messages) {
+  //     const fixedMessages = messages.map((msg: any) => ({
+  //       ...msg,
+  //       attachments: msg.attachments || [],
+  //     }));
+  //     if (conv.set) conv.set("Messages", fixedMessages);
+  //     else (conv as any).Messages = fixedMessages;
+  //   }
+  // });
 
   return conversations;
   } catch (err) {
