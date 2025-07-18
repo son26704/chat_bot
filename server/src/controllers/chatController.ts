@@ -1,14 +1,33 @@
 // server/src/controllers/chatController.ts
-import { Request, Response } from 'express';
-import { processChat, getConversationHistory, getUserConversations, deleteConversation, renameConversation, deleteMessageAndBelow, editMessageAndContinue, generateFollowUpQuestions, suggestProfileFromConversation, suggestProfileFromMessage } from '../services/chatService';
-import { AuthenticatedRequest, ChatRequest, ChatResponse, FollowUpQuestionsResponse } from '../types/auth';
+import { Request, Response } from "express";
+import {
+  processChat,
+  getConversationHistory,
+  getUserConversations,
+  deleteConversation,
+  renameConversation,
+  deleteMessageAndBelow,
+  editMessageAndContinue,
+  generateFollowUpQuestions,
+  suggestProfileFromConversation,
+  suggestProfileFromMessage,
+} from "../services/chatService";
+import {
+  AuthenticatedRequest,
+  ChatRequest,
+  ChatResponse,
+  FollowUpQuestionsResponse,
+} from "../types/auth";
 import multer from "multer";
 import mammoth from "mammoth";
 import pdfParse from "pdf-parse";
 import fs from "fs";
 import path from "path";
 
-const upload = multer({ dest: "uploads/" });
+const upload = multer({
+  dest: "uploads/",
+  limits: { fileSize: 1024 * 1024 },
+});
 
 export const chatController = [
   upload.array("files"), // nhận nhiều file với key "files"
@@ -45,6 +64,10 @@ export const chatController = [
             fs.unlinkSync(filePath); // cleanup file temp
           }
 
+          if (content.length > 2000) {
+            content = content.slice(0, 2000);
+          }
+
           attachments.push({
             name: file.originalname,
             content: content || "[Không thể đọc nội dung]",
@@ -66,12 +89,15 @@ export const chatController = [
   },
 ];
 
-export const getHistoryController = async (req: AuthenticatedRequest, res: Response) => {
+export const getHistoryController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { conversationId } = req.params;
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
     const history = await getConversationHistory(userId, conversationId);
     res.status(200).json(history);
@@ -80,11 +106,14 @@ export const getHistoryController = async (req: AuthenticatedRequest, res: Respo
   }
 };
 
-export const getConversationsController = async (req: AuthenticatedRequest, res: Response) => {
+export const getConversationsController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
     const conversations = await getUserConversations(userId);
     res.status(200).json(conversations);
@@ -93,12 +122,15 @@ export const getConversationsController = async (req: AuthenticatedRequest, res:
   }
 };
 
-export const deleteConversationController = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteConversationController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { conversationId } = req.params;
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
     await deleteConversation(userId, conversationId);
     res.status(204).send();
@@ -107,28 +139,41 @@ export const deleteConversationController = async (req: AuthenticatedRequest, re
   }
 };
 
-export const renameConversationController = async (req: AuthenticatedRequest, res: Response) => {
+export const renameConversationController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { conversationId } = req.params;
     const { title } = req.body;
-    if (!title || typeof title !== 'string') {
-      return res.status(400).json({ message: 'Title is required and must be a string' });
+    if (!title || typeof title !== "string") {
+      return res
+        .status(400)
+        .json({ message: "Title is required and must be a string" });
     }
     const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: 'User not authenticated' });
-    const conversation = await renameConversation(userId, conversationId, title);
+    if (!userId)
+      return res.status(401).json({ message: "User not authenticated" });
+    const conversation = await renameConversation(
+      userId,
+      conversationId,
+      title
+    );
     res.status(200).json(conversation);
   } catch (error: any) {
     res.status(404).json({ message: error.message });
   }
 };
 
-export const deleteMessageController = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteMessageController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { messageId } = req.params;
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
     await deleteMessageAndBelow(userId, messageId);
     res.status(204).send();
@@ -137,13 +182,18 @@ export const deleteMessageController = async (req: AuthenticatedRequest, res: Re
   }
 };
 
-export const editMessageController = async (req: AuthenticatedRequest, res: Response) => {
+export const editMessageController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { messageId } = req.params;
     const { newContent } = req.body;
     const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: 'User not authenticated' });
-    if (!newContent || typeof newContent !== 'string') return res.status(400).json({ message: 'newContent is required' });
+    if (!userId)
+      return res.status(401).json({ message: "User not authenticated" });
+    if (!newContent || typeof newContent !== "string")
+      return res.status(400).json({ message: "newContent is required" });
     const result = await editMessageAndContinue(userId, messageId, newContent);
     res.status(200).json(result);
   } catch (error: any) {
@@ -151,12 +201,15 @@ export const editMessageController = async (req: AuthenticatedRequest, res: Resp
   }
 };
 
-export const getFollowUpQuestionsController = async (req: AuthenticatedRequest, res: Response) => {
+export const getFollowUpQuestionsController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { conversationId } = req.params;
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
     const suggestions = await generateFollowUpQuestions(userId, conversationId);
     const response: FollowUpQuestionsResponse = { suggestions };
@@ -166,7 +219,10 @@ export const getFollowUpQuestionsController = async (req: AuthenticatedRequest, 
   }
 };
 
-export const getSuggestedProfileFromMessage = async (req: AuthenticatedRequest, res: Response) => {
+export const getSuggestedProfileFromMessage = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { messageId } = req.params;
     const userId = req.user?.id;
@@ -179,7 +235,10 @@ export const getSuggestedProfileFromMessage = async (req: AuthenticatedRequest, 
   }
 };
 
-export const getSuggestedProfileFromConversation = async (req: AuthenticatedRequest, res: Response) => {
+export const getSuggestedProfileFromConversation = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { conversationId } = req.params;
     const userId = req.user?.id;

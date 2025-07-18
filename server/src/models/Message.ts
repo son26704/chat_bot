@@ -8,6 +8,7 @@ class Message extends Model {
   public conversationId!: string;
   public content!: string;
   public role!: 'user' | 'assistant';
+  public attachments!: any;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -30,6 +31,10 @@ Message.init(
     role: {
       type: DataTypes.ENUM('user', 'assistant'),
       allowNull: false,
+    },
+    attachments: {
+      type: DataTypes.JSON,
+      allowNull: true,
     },
   },
   {

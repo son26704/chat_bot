@@ -72,10 +72,7 @@ ${prompt}
 
   const userMsg = await Message.create({
     conversationId: conversation.id,
-    content:
-      attachments && attachments.length > 0
-        ? `[Đính kèm: ${attachments.map((a) => a.name).join(", ")}]\n${prompt}`
-        : prompt,
+    content: prompt, // Chỉ lưu prompt gốc, không format với file đính kèm
     role: "user",
     attachments: attachments?.map((a) => a.name) || [],
   });
@@ -107,7 +104,7 @@ export const getConversationHistory = async (
     include: [
       {
         model: Message,
-        attributes: ["id", "content", "role", "createdAt"],
+        attributes: ["id", "content", "role", "createdAt", "attachments"],
         order: [["createdAt", "ASC"]],
       },
     ],
@@ -117,10 +114,22 @@ export const getConversationHistory = async (
     throw new Error("Conversation not found");
   }
 
+  // // Fallback attachments về [] nếu null trong từng message
+  // const messages = (conversation.get && conversation.get("Messages")) || (conversation as any).Messages;
+  // if (messages) {
+  //   const fixedMessages = messages.map((msg: any) => ({
+  //     ...msg,
+  //     attachments: msg.attachments || [],
+  //   }));
+  //   if (conversation.set) conversation.set("Messages", fixedMessages);
+  //   else (conversation as any).Messages = fixedMessages;
+  // }
+
   return conversation;
 };
 
 export const getUserConversations = async (userId: string) => {
+  try {
   const conversations = await Conversation.findAll({
     where: { userId },
     attributes: ["id", "title", "createdAt", "updatedAt"],
@@ -128,14 +137,31 @@ export const getUserConversations = async (userId: string) => {
     include: [
       {
         model: Message,
-        attributes: ["id", "content", "role", "createdAt"],
+        attributes: ["id", "content", "role", "createdAt", "attachments"],
         limit: 1,
         order: [["createdAt", "DESC"]],
       },
     ],
   });
 
+  // Fallback attachments về [] nếu null trong từng message của mỗi conversation
+  conversations.forEach((conv: any) => {
+    const messages = (conv.get && conv.get("Messages")) || (conv as any).Messages;
+    if (messages) {
+      const fixedMessages = messages.map((msg: any) => ({
+        ...msg,
+        attachments: msg.attachments || [],
+      }));
+      if (conv.set) conv.set("Messages", fixedMessages);
+      else (conv as any).Messages = fixedMessages;
+    }
+  });
+
   return conversations;
+  } catch (err) {
+    console.error("getUserConversations error:", err);
+    throw err;
+  }
 };
 
 export const deleteConversation = async (

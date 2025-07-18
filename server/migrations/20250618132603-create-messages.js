@@ -32,6 +32,10 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false,
       },
+      attachments: {
+        type: Sequelize.JSON,
+        allowNull: true,
+      },
     });
   },
 
