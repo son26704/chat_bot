@@ -86,7 +86,7 @@ export const chatController = [
 
       for (const link of linkItems) {
         try {
-          console.log(`[DEBUG] Crawling link: ${link.url}`);
+          // console.log(`[DEBUG] Crawling link: ${link.url}`);
           const html = await rp(link.url, { timeout: 5000 });
           const $ = cheerio.load(html);
 
@@ -132,7 +132,7 @@ export const chatController = [
             content: text || "[Không lấy được nội dung từ link]",
           });
 
-          console.log(`[DEBUG] ✅ Crawled ${link.url} - ${text.length} chars`);
+          // console.log(`[DEBUG] ✅ Crawled ${link.url} - ${text.length} chars`);
         } catch (err) {
           console.warn("❗ Lỗi khi tải link:", link.url, err);
           attachments.push({

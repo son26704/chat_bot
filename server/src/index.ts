@@ -8,6 +8,7 @@ import authRoutes from './routes/authRoutes';
 import protectedRoutes from './routes/protectedRoutes';
 import chatRoutes from './routes/chatRoutes';
 import userRoutes from './routes/userRoutes';
+import searchWebRouter from "./routes/searchWeb";
 import { createServer } from 'http';
 import { initSocket } from './socket';
 
@@ -22,6 +23,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', chatRoutes);
 app.use('/api', userRoutes);
 app.use('/api', protectedRoutes);
+app.use("/api/search-web", searchWebRouter);
 
 app.get('/', (req, res) => {
   res.send('Chat Bot Backend is running!');
