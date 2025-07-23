@@ -21,11 +21,20 @@ export const processChat = async (
   if (conversationId) {
     conversation = await Conversation.findByPk(conversationId);
   } else {
+    // 🧠 Tạm tạo với title mặc định
     conversation = await Conversation.create({
       userId,
       title: prompt.slice(0, 50),
       systemPrompt,
     });
+
+    // 🧠 Gọi AI đặt lại tiêu đề
+    try {
+      const title = await generateConversationTitle(prompt);
+      await conversation.update({ title });
+    } catch (err) {
+      console.warn("[WARN] Không thể tạo tiêu đề tự động:", err);
+    }
   }
 
   if (!conversation || conversation.userId !== userId) {
@@ -41,25 +50,22 @@ export const processChat = async (
   let totalTokens = estimateTokens(prompt);
   const history = [];
   for (let i = messages.length - 1; i >= 0 && totalTokens < MAX_TOKENS; i--) {
-  const msg = messages[i];
-  const msgTokens = estimateTokens(msg.content);
-  if (totalTokens + msgTokens <= MAX_TOKENS) {
-    history.unshift({
-      role: msg.role === "user" ? "user" : "model", // Đảm bảo đúng kiểu
-      content: msg.content,
-    } as ChatMessage); // Thêm ép kiểu rõ ràng
-    totalTokens += msgTokens;
+    const msg = messages[i];
+    const msgTokens = estimateTokens(msg.content);
+    if (totalTokens + msgTokens <= MAX_TOKENS) {
+      history.unshift({
+        role: msg.role === "user" ? "user" : "model", // Đảm bảo đúng kiểu
+        content: msg.content,
+      } as ChatMessage); // Thêm ép kiểu rõ ràng
+      totalTokens += msgTokens;
+    }
   }
-}
 
   // ✅ Gộp nội dung file vào prompt
   let finalPrompt = prompt;
   if (attachments && attachments.length > 0) {
     const filesText = attachments
-      .map(
-        (file) =>
-          `Tên file: ${file.name}\nNội dung:\n${file.content}\n---`
-      )
+      .map((file) => `Tên file: ${file.name}\nNội dung:\n${file.content}\n---`)
       .join("\n");
 
     finalPrompt = `
@@ -79,7 +85,11 @@ ${prompt}
 
   const isMemoryWorthy = keywordFilter(prompt) || patternFilter(prompt);
 
-  const replyText = await generateChatResponse(finalPrompt, history, conversation.systemPrompt);
+  const replyText = await generateChatResponse(
+    finalPrompt,
+    history,
+    conversation.systemPrompt
+  );
 
   const assistantMsg = await Message.create({
     conversationId: conversation.id,
@@ -130,34 +140,34 @@ export const getConversationHistory = async (
 
 export const getUserConversations = async (userId: string) => {
   try {
-  const conversations = await Conversation.findAll({
-    where: { userId },
-    attributes: ["id", "title", "createdAt", "updatedAt"],
-    order: [["updatedAt", "DESC"]],
-    include: [
-      {
-        model: Message,
-        attributes: ["id", "content", "role", "createdAt", "attachments"],
-        limit: 1,
-        order: [["createdAt", "DESC"]],
-      },
-    ],
-  });
+    const conversations = await Conversation.findAll({
+      where: { userId },
+      attributes: ["id", "title", "createdAt", "updatedAt"],
+      order: [["updatedAt", "DESC"]],
+      include: [
+        {
+          model: Message,
+          attributes: ["id", "content", "role", "createdAt", "attachments"],
+          limit: 1,
+          order: [["createdAt", "DESC"]],
+        },
+      ],
+    });
 
-  // Fallback attachments về [] nếu null trong từng message của mỗi conversation
-  // conversations.forEach((conv: any) => {
-  //   const messages = (conv.get && conv.get("Messages")) || (conv as any).Messages;
-  //   if (messages) {
-  //     const fixedMessages = messages.map((msg: any) => ({
-  //       ...msg,
-  //       attachments: msg.attachments || [],
-  //     }));
-  //     if (conv.set) conv.set("Messages", fixedMessages);
-  //     else (conv as any).Messages = fixedMessages;
-  //   }
-  // });
+    // Fallback attachments về [] nếu null trong từng message của mỗi conversation
+    // conversations.forEach((conv: any) => {
+    //   const messages = (conv.get && conv.get("Messages")) || (conv as any).Messages;
+    //   if (messages) {
+    //     const fixedMessages = messages.map((msg: any) => ({
+    //       ...msg,
+    //       attachments: msg.attachments || [],
+    //     }));
+    //     if (conv.set) conv.set("Messages", fixedMessages);
+    //     else (conv as any).Messages = fixedMessages;
+    //   }
+    // });
 
-  return conversations;
+    return conversations;
   } catch (err) {
     console.error("getUserConversations error:", err);
     throw err;
@@ -306,9 +316,15 @@ Hãy gợi ý đúng 3 câu hỏi tiếp theo mà người dùng có thể hỏi
   return response; // ✅ Trả về nguyên văn chuỗi JSON như mô hình phản hồi
 };
 
-export const suggestProfileFromMessage = async (userId: string, messageId: string): Promise<string> => {
-  const message = await Message.findOne({ where: { id: messageId }, include: [Conversation] });
-  if (!message || message.role !== 'user') throw new Error("Invalid message");
+export const suggestProfileFromMessage = async (
+  userId: string,
+  messageId: string
+): Promise<string> => {
+  const message = await Message.findOne({
+    where: { id: messageId },
+    include: [Conversation],
+  });
+  if (!message || message.role !== "user") throw new Error("Invalid message");
 
   // Sửa lại để sử dụng MongoDB syntax
   const userProfile = await UserProfile.findOne({ userId });
@@ -347,14 +363,19 @@ Nếu không có thông tin mới cần thêm, phản hồi y nguyên hồ sơ h
   return response;
 };
 
-export const suggestProfileFromConversation = async (userId: string, conversationId: string): Promise<string> => {
-  const conversation = await Conversation.findOne({ where: { id: conversationId, userId } });
+export const suggestProfileFromConversation = async (
+  userId: string,
+  conversationId: string
+): Promise<string> => {
+  const conversation = await Conversation.findOne({
+    where: { id: conversationId, userId },
+  });
   if (!conversation) throw new Error("Conversation not found");
 
   const messages = await Message.findAll({
-    where: { conversationId, role: 'user' },
-    order: [['createdAt', 'ASC']],
-    attributes: ['content'],
+    where: { conversationId, role: "user" },
+    order: [["createdAt", "ASC"]],
+    attributes: ["content"],
   });
 
   // Sửa lại để sử dụng MongoDB syntax
@@ -362,7 +383,7 @@ export const suggestProfileFromConversation = async (userId: string, conversatio
   const profileData = JSON.stringify(userProfile?.data || {}, null, 2);
 
   let totalTokens = 0;
-  let userContext = '';
+  let userContext = "";
   for (const msg of messages.reverse()) {
     const tokens = estimateTokens(msg.content);
     if (totalTokens + tokens > MAX_TOKENS) break;
@@ -401,4 +422,32 @@ Nếu không có thông tin mới cần thêm, phản hồi y nguyên hồ sơ h
 
   const response = await generateChatResponse(prompt, []);
   return response;
+};
+
+export const generateConversationTitle = async (
+  prompt: string
+): Promise<string> => {
+  const titlePrompt = `
+Bạn là hệ thống đặt tiêu đề cho đoạn hội thoại.
+
+Nội dung người dùng vừa nhập là:
+"${prompt}"
+
+Hãy tạo một tiêu đề NGẮN GỌN (tối đa 10 từ) để mô tả đoạn hội thoại này.
+
+- ƯU TIÊN bắt đầu bằng một icon cảm xúc hoặc biểu tượng phù hợp (ví dụ: 🎵, 📚, 🤖, 💡, ...)
+- KHÔNG giải thích gì thêm, chỉ trả về một chuỗi tiêu đề duy nhất
+
+Ví dụ:
+- 🎵 Bài hát hay nhất 2021
+- 📚 Tóm tắt sách 
+- 🤖 Lập trình Python cơ bản
+
+❗ Chỉ trả về 1 dòng tiêu đề duy nhất.
+`;
+
+  const result = await generateChatResponse(titlePrompt, [
+    { role: "user", content: prompt },
+  ]);
+  return result.trim().slice(0, 100);
 };

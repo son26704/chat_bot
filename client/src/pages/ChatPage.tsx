@@ -92,6 +92,7 @@ const ChatPage = () => {
   const [showSearchWebModal, setShowSearchWebModal] = useState(false);
   // const [fileError, setFileError] = useState<string>("");
   // const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [shouldAutoSelectFirst, setShouldAutoSelectFirst] = useState(false);
 
   useEffect(() => {
     fetchConversations();
@@ -165,7 +166,12 @@ const ChatPage = () => {
     try {
       const convs = await getUserConversations();
       setConversations(convs);
-      if (convs.length > 0 && !conversation && !isStartingNewConversation) {
+      if (
+        convs.length > 0 &&
+        !conversation &&
+        !isStartingNewConversation &&
+        shouldAutoSelectFirst
+      ) {
         fetchConversation(convs[0].id);
       }
       if (isStartingNewConversation) {
@@ -211,9 +217,11 @@ const ChatPage = () => {
       file: File;
       name: string;
     }[];
-    const linkAttachments = attachments.filter(
-      (a) => a.type === "link"
-    ) as { type: "link"; url: string; name: string }[];
+    const linkAttachments = attachments.filter((a) => a.type === "link") as {
+      type: "link";
+      url: string;
+      name: string;
+    }[];
     const userMessage: Message = {
       id: Date.now().toString(),
       content: prompt,
@@ -330,6 +338,7 @@ const ChatPage = () => {
   const handleSelectConversation = (convId: string) => {
     fetchConversation(convId);
     setShowSuggestions(false);
+    setShouldAutoSelectFirst(true); // Cho phép auto-select trong tương lai
     if (window.innerWidth <= 768) {
       setSidebarOpen(false);
     }
@@ -341,6 +350,20 @@ const ChatPage = () => {
     setIsStartingNewConversation(true);
     setHasSentFirstMessage(false);
     setUseProfileContext(true);
+    setAttachments([]);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setMemoryWorthyMsgIds(new Set());
+    setIsTyping(false);
+    setEditingMessageId(null);
+    setEditValue("");
+    setDeletingMessageId(null);
+    setShouldAutoSelectFirst(false);
+
+    // Đóng sidebar trên mobile
+    if (window.innerWidth <= 768) {
+      setSidebarOpen(false);
+    }
   };
 
   const handleDeleteConversation = async (convId: string) => {
@@ -349,6 +372,15 @@ const ChatPage = () => {
       setConversations(conversations.filter((conv) => conv.id !== convId));
       if (conversation?.id === convId) {
         setConversation(null);
+        setHasSentFirstMessage(false);
+        setUseProfileContext(true);
+        setPrompt("");
+        setAttachments([]);
+        setShowSuggestions(false);
+        setSuggestions([]);
+        setMemoryWorthyMsgIds(new Set());
+        setShouldAutoSelectFirst(false); 
+        setIsStartingNewConversation(true);
       }
       message.success("Conversation deleted");
     } catch (error) {
@@ -876,7 +908,11 @@ const ChatPage = () => {
                                     );
                                   },
                                   a: ({ node, ...props }) => (
-                                    <a {...props} target="_blank" rel="noopener noreferrer" />
+                                    <a
+                                      {...props}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    />
                                   ),
                                 }}
                               >
@@ -1042,7 +1078,7 @@ const ChatPage = () => {
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                           display: "inline-block",
-                          verticalAlign: "middle"
+                          verticalAlign: "middle",
                         }}
                         title={item.url}
                       >
@@ -1054,7 +1090,7 @@ const ChatPage = () => {
                           maxWidth: 120,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          whiteSpace: "nowrap"
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {item.name}
